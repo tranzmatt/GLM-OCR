@@ -143,7 +143,7 @@ class Pipeline:
         )
         t2 = threading.Thread(
             target=layout_worker,
-            args=(state, self.layout_detector, save_layout_visualization, layout_vis_output_dir),
+            args=(state, self.layout_detector, save_layout_visualization, layout_vis_output_dir, self.config.layout.use_polygon),
             daemon=True,
         )
         t3 = threading.Thread(

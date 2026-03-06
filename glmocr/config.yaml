@@ -140,7 +140,7 @@ pipeline:
       table: "Table Recognition:"
       formula: "Formula Recognition:"
 
-    # PDF processing (pypdfium2 only)
+    # PDF processing
     pdf_dpi: 200
     pdf_max_pages: null # null = no limit
     pdf_verbose: false
@@ -195,6 +195,14 @@ pipeline:
     workers: 1
     cuda_visible_devices: "0"
     # img_size: null                # resize input (optional)
+
+    # Use polygon masks for region cropping and visualization.
+    # When true, regions are cropped using the polygon outline from layout
+    # detection (more precise, masks out content outside the polygon), 
+    # recommended for documents with rotating or staggered layouts.
+    # When false, regions are cropped using the bounding box only (faster, simpler),
+    # recommended for regular documents without rotating.
+    use_polygon: false
 
     # Post-processing
     layout_nms: true

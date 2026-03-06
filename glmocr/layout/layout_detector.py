@@ -216,6 +216,7 @@ class PPDocLayoutDetector(BaseLayoutDetector):
         save_visualization: bool = False,
         visualization_output_dir: Optional[str] = None,
         global_start_idx: int = 0,
+        use_polygon: bool = False,
     ) -> List[List[Dict]]:
         """Batch-detect layout regions in-process.
 
@@ -318,6 +319,7 @@ class PPDocLayoutDetector(BaseLayoutDetector):
                     show_label=True,
                     show_score=True,
                     show_index=True,
+                    use_polygon=use_polygon,
                 )
                 saved_vis_paths.append(str(save_path))
 

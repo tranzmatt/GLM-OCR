@@ -132,6 +132,7 @@ def layout_worker(
     layout_detector: "BaseLayoutDetector",
     save_visualization: bool,
     vis_output_dir: Optional[str],
+    use_polygon: bool = False,
 ) -> None:
     """Consume pages, run layout detection in batches, push regions.
 
@@ -173,6 +174,7 @@ def layout_worker(
                     _flush_layout_batch(
                         state, layout_detector, batch_images, batch_page_indices,
                         save_visualization, vis_output_dir, global_start_idx,
+                        use_polygon=use_polygon,
                     )
                     global_start_idx += len(batch_page_indices)
                     for pi in batch_page_indices:
@@ -185,6 +187,7 @@ def layout_worker(
                     _flush_layout_batch(
                         state, layout_detector, batch_images, batch_page_indices,
                         save_visualization, vis_output_dir, global_start_idx,
+                        use_polygon=use_polygon,
                     )
                     global_start_idx += len(batch_page_indices)
                     for pi in batch_page_indices:
@@ -207,6 +210,7 @@ def layout_worker(
                     _flush_layout_batch(
                         state, layout_detector, batch_images, batch_page_indices,
                         save_visualization, vis_output_dir, global_start_idx,
+                        use_polygon=use_polygon,
                     )
                 state.safe_put(state.region_queue, {"identifier": IDENTIFIER_DONE})
                 break
@@ -226,6 +230,7 @@ def _flush_layout_batch(
     save_visualization: bool,
     vis_output_dir: Optional[str],
     global_start_idx: int,
+    use_polygon: bool = False,
 ) -> None:
     """Run layout detection on one batch and enqueue the resulting regions."""
     try:
@@ -234,6 +239,7 @@ def _flush_layout_batch(
             save_visualization=save_visualization and vis_output_dir is not None,
             visualization_output_dir=vis_output_dir,
             global_start_idx=global_start_idx,
+            use_polygon=use_polygon,
         )
     except Exception as e:
         logger.warning(
@@ -250,7 +256,8 @@ def _flush_layout_batch(
         state.layout_results_dict[page_idx] = layout_result
         for region in layout_result:
             try:
-                cropped = crop_image_region(image, region["bbox_2d"], region["polygon"])
+                polygon = region.get("polygon") if use_polygon else None
+                cropped = crop_image_region(image, region["bbox_2d"], polygon)
             except Exception as e:
                 logger.warning(
                     "Failed to crop region on page %d (bbox=%s), skipping: %s",
