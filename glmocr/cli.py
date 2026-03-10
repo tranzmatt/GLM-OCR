@@ -9,7 +9,7 @@ import argparse
 import threading
 import traceback
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Tuple
 
 from tqdm import tqdm
 
@@ -19,39 +19,54 @@ from glmocr.utils.logging import get_logger, configure_logging
 logger = get_logger(__name__)
 
 
-def load_image_paths(input_path: str) -> List[str]:
-    """Load image paths from a file or directory.
+_SUPPORTED_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp", ".pdf"}
 
-    PDF files are included as inputs (they will be expanded into page images later).
+
+def load_image_paths(input_path: str) -> Tuple[List[str], Optional[str]]:
+    """Load image paths from a file or directory (recursively).
+
+    When *input_path* is a directory the search is recursive — all supported
+    image/PDF files in nested subdirectories are collected.
 
     Args:
         input_path: Input path (file or directory).
 
     Returns:
-        List[str]: Image/PDF file paths.
+        A tuple ``(image_paths, input_root)``.
+        *input_root* is the absolute directory path when the input is a
+        directory (``None`` when it is a single file).  It is used by the
+        caller to compute relative paths so that the output preserves the
+        original directory hierarchy.
     """
     path = Path(input_path)
-    image_paths = []
 
     if path.is_file():
-        suffix = path.suffix.lower()
-        if suffix in [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp", ".pdf"]:
-            image_paths.append(str(path.absolute()))
-        else:
+        if path.suffix.lower() not in _SUPPORTED_SUFFIXES:
             raise ValueError(f"Not Supported Type: {path.suffix}")
-    elif path.is_dir():
+        return [str(path.absolute())], None
+
+    if path.is_dir():
+        seen: set = set()
+        image_paths: List[str] = []
         for ext in ["*.jpg", "*.jpeg", "*.png", "*.bmp", "*.gif", "*.webp", "*.pdf"]:
-            image_paths.extend([str(p.absolute()) for p in path.glob(ext)])
-            image_paths.extend([str(p.absolute()) for p in path.glob(ext.upper())])
+            for p in path.rglob(ext):
+                abs_p = str(p.absolute())
+                if abs_p not in seen:
+                    seen.add(abs_p)
+                    image_paths.append(abs_p)
+            for p in path.rglob(ext.upper()):
+                abs_p = str(p.absolute())
+                if abs_p not in seen:
+                    seen.add(abs_p)
+                    image_paths.append(abs_p)
         image_paths.sort()
         if not image_paths:
             raise ValueError(
                 f"Cannot find image or PDF files in directory: {input_path}"
             )
-    else:
-        raise ValueError(f"Path does not exist: {input_path}")
+        return image_paths, str(path.absolute())
 
-    return image_paths
+    raise ValueError(f"Path does not exist: {input_path}")
 
 
 def _queue_stats_updater(glm_parser: GlmOcr, pbar: tqdm, stop: threading.Event):
@@ -144,7 +159,7 @@ def main():
 
     try:
         logger.info("Loading images: %s", args.input)
-        image_paths = load_image_paths(args.input)
+        image_paths, input_root = load_image_paths(args.input)
         logger.info("Found %d file(s)", len(image_paths))
 
         save_layout_vis = not args.no_layout_vis
@@ -203,8 +218,13 @@ def main():
                                 print(result.markdown_result)
 
                         if not args.no_save:
+                            save_dir = args.output
+                            if input_root and result.original_images:
+                                rel = Path(result.original_images[0]).parent.relative_to(input_root)
+                                if str(rel) != ".":
+                                    save_dir = str(Path(args.output) / rel)
                             result.save(
-                                output_dir=args.output,
+                                output_dir=save_dir,
                                 save_layout_visualization=save_layout_vis,
                             )
 
