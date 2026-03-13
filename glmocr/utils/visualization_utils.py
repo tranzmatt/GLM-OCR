@@ -152,7 +152,7 @@ def _draw_polygon_masks(
     """Draw polygon masks on image with alpha blending.
 
     Args:
-        image: Input image as numpy array (RGB format, float32).
+        image: Input image as numpy array (RGB format).
         boxes: List of detection boxes with polygon_points.
         label2color: Dictionary mapping labels to colors.
         alpha: Alpha value for blending (0-1).
@@ -168,7 +168,7 @@ def _draw_polygon_masks(
     draw = ImageDraw.Draw(overlay)
 
     for i, box_info in enumerate(boxes):
-        polygon_points = box_info.get("polygon_points")
+        polygon_points = box_info.get("polygon_points") or []
         if len(polygon_points) < 3:
             continue
 
