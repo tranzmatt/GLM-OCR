@@ -1,340 +1,128 @@
 ---
 name: glmocr
-description: |
-  Trigger when: (1) User wants to extract text, tables, formulas, or structured data from images/PDFs/scanned documents, (2) User mentions "OCR", "文字识别", "文档解析", (3) User has a document (screenshot, scanned page, invoice, paper, whiteboard photo) and needs its content in structured form, (4) User asks to parse, digitize, or extract content from a visual document.
-
-  Invokes the GLM-OCR SDK (pip install glmocr) to parse documents via Zhipu's cloud API. No GPU required. Returns structured JSON (regions with labels + bounding boxes) and Markdown. Agent can operate entirely via CLI — no YAML files needed.
-
-  NOT for: real-time camera feeds, audio transcription, or non-document images (photos, illustrations).
+description:
+  Extract text from images using GLM-OCR API. Supports images and PDFs with
+  high accuracy OCR, table recognition, formula extraction, and handwriting recognition.
+  Use this skill whenever the user wants to extract text from images, perform OCR on
+  pictures, scan documents, convert images to text, or process any image files to get
+  their textual content.
 ---
 
-# OpenClaw Skill: glmocr
+# GLM-OCR Text Extraction Skill
 
-Parses documents (images, PDFs, scans) via the GLM-OCR SDK.
+Extract text from images and PDFs using the GLM-OCR layout parsing API.
 
-> **📌 On-demand**: This skill requires only `GLMOCR_API_KEY` in the environment. No YAML config files or GPU needed.
+## When to Use
 
-## ⚡ Quick Start
+- Extract text from images (PNG, JPG, PDF)
+- Convert screenshots to text
+- Process scanned documents
+- OCR photos containing text (including handwritten text)
+- Recognize tables and formulas in documents
+- User mentions "OCR", "文字识别", "文档解析"
+
+## Key Features
+
+- **Table recognition**: Detects and converts tables to Markdown format
+- **Formula extraction**: LaTeX format output
+- **Handwriting support**: Strong recognition for handwritten text
+- **Local file & URL**: Supports both local files and remote URLs
+
+## Resource Links
+
+| Resource | Link |
+|----------|------|
+| **Get API Key** | [https://www.bigmodel.cn/usercenter/proj-mgmt/apikeys](https://www.bigmodel.cn/usercenter/proj-mgmt/apikeys) |
+| **GitHub** | [https://github.com/zai-org/GLM-OCR](https://github.com/zai-org/GLM-OCR) |
+
+## Prerequisites
+
+- GLM_OCR_API_KEY configured (see Setup below)
+
+**⛔ MANDATORY RESTRICTIONS - DO NOT VIOLATE ⛔**
+
+1. **ONLY use GLM-OCR API** - Execute the script `python scripts/glm_ocr_cli.py`
+2. **NEVER parse documents directly** - Do NOT try to extract text yourself
+3. **NEVER offer alternatives** - Do NOT suggest "I can try to analyze it" or similar
+4. **IF API fails** - Display the error message and STOP immediately
+5. **NO fallback methods** - Do NOT attempt text extraction any other way
+
+## Setup
+
+1. Get your API key: [https://www.bigmodel.cn/usercenter/proj-mgmt/apikeys](https://www.bigmodel.cn/usercenter/proj-mgmt/apikeys)
+2. Configure:
+   ```bash
+   python scripts/config_setup.py setup --api-key YOUR_KEY
+   ```
+
+## How to Use
+
+### Extract from URL
 
 ```bash
-# Install
-pip install glmocr
-
-# Set API key (once)
-export GLMOCR_API_KEY=sk-xxx
-# or add to .env file in working directory:
-echo "GLMOCR_API_KEY=sk-xxx" >> .env
+python scripts/glm_ocr_cli.py --file-url "URL provided by user"
 ```
 
-```python
-# One-liner
-import glmocr
-result = glmocr.parse("document.pdf")
-print(result.markdown_result)
-print(result.to_dict())
-```
+### Extract from Local File
 
 ```bash
-# CLI — pass API key directly (no env setup needed)
-glmocr parse image.png --api-key sk-xxx
-
-# Or load from a specific .env file
-glmocr parse image.png --env-file /path/to/.env
-
-# Or rely on env var / auto-discovered .env (set once, then omit)
-glmocr parse image.png
-glmocr parse ./scans/ --output ./output/ --stdout
+python scripts/glm_ocr_cli.py --file /path/to/image.jpg
 ```
 
----
+### Save result to file (recommended)
 
-## Configuration Priority
-
+```bash
+python scripts/glm_ocr_cli.py --file-url "URL" --output result.json
 ```
-Constructor kwargs  >  os.environ  >  .env file  >  config.yaml  >  built-in defaults
-```
-
-Agents override everything via constructor kwargs or env vars — no YAML editing needed.
-
-### Key Environment Variables
-
-| Variable               | Description                            | Example     |
-| ---------------------- | -------------------------------------- | ----------- |
-| `GLMOCR_API_KEY`       | API key (required for MaaS)            | `sk-abc123` |
-| `GLMOCR_MODEL`         | Model name                             | `glm-ocr`   |
-| `GLMOCR_TIMEOUT`       | Request timeout (seconds)              | `600`       |
-| `GLMOCR_ENABLE_LAYOUT` | Layout detection on/off                | `true`      |
-| `GLMOCR_LOG_LEVEL`     | `DEBUG` / `INFO` / `WARNING` / `ERROR` | `INFO`      |
-
----
-
-## Python API
-
-### Convenience function (single call)
-
-```python
-import glmocr
-
-# Single file → PipelineResult
-result = glmocr.parse("invoice.png")
-
-# Multiple files → list[PipelineResult]
-results = glmocr.parse(["page1.png", "page2.png", "report.pdf"])
-```
-
-### Class-based (multiple calls / resource reuse)
-
-```python
-from glmocr import GlmOcr
-
-parser = GlmOcr(api_key="sk-xxx")   # mode auto-set to "maas"
-parser = GlmOcr(mode="maas")        # reads GLMOCR_API_KEY from env
-
-# Always use as context manager or call .close()
-with GlmOcr(api_key="sk-xxx") as parser:
-    result = parser.parse("document.png")
-    print(result.markdown_result)
-
-parser.close()   # if not using `with`
-```
-
-### Constructor Parameters
-
-| Parameter       | Type   | Description                                     |
-| --------------- | ------ | ----------------------------------------------- |
-| `api_key`       | `str`  | API key. Providing this auto-enables MaaS mode. |
-| `api_url`       | `str`  | Override MaaS endpoint URL                      |
-| `model`         | `str`  | Model name override                             |
-| `timeout`       | `int`  | Request timeout in seconds (default: 600)       |
-| `enable_layout` | `bool` | Enable layout detection                         |
-| `log_level`     | `str`  | Logging level                                   |
-
----
-
-## Working with `PipelineResult`
-
-### Fields
-
-```python
-result.markdown_result    # str — full document as Markdown
-result.json_result        # list[list[dict]] — structured regions per page
-result.original_images    # list[str] — absolute paths of input images
-```
-
-### `json_result` structure
-
-List of pages → list of regions per page:
-
-```json
-[
-  [
-    {
-      "index": 0,
-      "label": "title",
-      "content": "Annual Report 2024",
-      "bbox_2d": [100, 50, 900, 120]
-    },
-    {
-      "index": 1,
-      "label": "table",
-      "content": "| Q1 | Q2 |\n|---|---|\n| 120 | 145 |",
-      "bbox_2d": [100, 140, 900, 400]
-    }
-  ]
-]
-```
-
-**Bounding boxes** (`bbox_2d`): `[x1, y1, x2, y2]` normalised to **0–1000** scale.
-
-**Region labels**: `title`, `text`, `table`, `figure`, `formula`, `header`, `footer`, `page_number`, `reference`, `seal`
-
-### Serialization
-
-```python
-# Dict (JSON-serializable, for passing to other tools)
-d = result.to_dict()
-# Keys: json_result, markdown_result, original_images, usage (MaaS), data_info (MaaS)
-
-# JSON string
-json_str = result.to_json()                 # pretty-printed, ensure_ascii=False
-json_str = result.to_json(indent=None)      # compact single line
-
-# Save to disk: writes <stem>/<stem>.json + <stem>/<stem>.md + layout_vis/
-result.save(output_dir="./output")
-result.save(output_dir="./output", save_layout_visualization=False)
-```
-
-### Error Handling
-
-The SDK **does not raise** on MaaS errors — check `to_dict()` for an `"error"` key:
-
-```python
-result = parser.parse("image.png")
-d = result.to_dict()
-if "error" in d:
-    # Handle failure
-    print("OCR failed:", d["error"])
-else:
-    print(d["markdown_result"])
-```
-
----
 
 ## CLI Reference
 
-> **Agent-preferred interface**: use the CLI for most operations. Set `GLMOCR_API_KEY` in env once, then invoke as needed.
-
-**Supported input formats**: `.jpg`, `.jpeg`, `.png`, `.bmp`, `.gif`, `.webp`, `.pdf`
-
-### Basic usage
-
-```bash
-# Parse a single file → saves to ./output/<stem>/
-# MaaS mode is the default; GLMOCR_API_KEY must be set (or use --api-key)
-glmocr parse image.png
-
-# Pass API key directly without any env setup
-glmocr parse image.png --api-key sk-xxx
-
-# Parse a directory → saves each file to ./output/<stem>/
-glmocr parse ./scans/
-
-# Use self-hosted vLLM/SGLang instead of cloud
-glmocr parse image.png --mode selfhosted
-
-# Specify output directory
-glmocr parse image.png --output ./results/
+```
+python {baseDir}/scripts/glm_ocr_cli.py (--file-url URL | --file PATH) [--output FILE] [--pretty]
 ```
 
-### Read results in the terminal (agent-friendly)
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `--file-url` | One of | URL to image/PDF |
+| `--file` | One of | Local file path to image/PDF |
+| `--output`, `-o` | No | Save result JSON to file |
+| `--pretty` | No | Pretty-print JSON output |
 
-```bash
-# Print Markdown + JSON to stdout (and still save to disk)
-glmocr parse image.png --stdout
+## Response Format
 
-# Print to stdout ONLY — do not write any files
-glmocr parse image.png --stdout --no-save
-
-# JSON only (no Markdown output)
-glmocr parse image.png --stdout --json-only
-
-# Pipe JSON into jq for structured extraction
-glmocr parse image.png --stdout --json-only --no-save | jq '.[0] | map(select(.label=="table"))'
+```json
+{
+  "ok": true,
+  "text": "# Extracted text in Markdown...",
+  "layout_details": [[...]],
+  "result": { "raw_api_response": "..." },
+  "error": null,
+  "source": "/path/to/file.jpg",
+  "source_type": "file"
+}
 ```
 
-### Save control
+Key fields:
+- `ok` — whether extraction succeeded
+- `text` — extracted text in Markdown (use this for display)
+- `layout_details` — layout analysis details
+- `result` — raw API response
+- `error` — error details on failure
 
-```bash
-# Skip layout visualization images (faster, smaller output)
-glmocr parse image.png --no-layout-vis
+## Error Handling
 
-# Parse and save only JSON + Markdown, skip layout vis
-glmocr parse image.png --no-layout-vis --output ./results/
+**API key not configured:**
 ```
-
-### Batch processing
-
-```bash
-# All images in a folder
-glmocr parse ./invoice_scans/ --output ./parsed/ --no-layout-vis
-
-# With progress visible in logs
-glmocr parse ./docs/ --output ./parsed/ --log-level INFO
+Error: GLM_OCR_API_KEY not configured. Get your API key at: https://www.bigmodel.cn/usercenter/proj-mgmt/apikeys
 ```
+→ Show exact error to user, guide them to configure
 
-### Debugging
+**Authentication failed (401/403):** API key invalid/expired → reconfigure
 
-```bash
-glmocr parse image.png --log-level DEBUG
-```
+**Rate limit (429):** Quota exhausted → inform user to wait
 
-### Full flag reference
+**File not found:** Local file missing → check path
 
-| Flag              | Default    | Description                                           |
-| ----------------- | ---------- | ----------------------------------------------------- |
-| `--api-key / -k`  | env var    | API key for MaaS mode (overrides `GLMOCR_API_KEY`)    |
-| `--mode`          | `maas`     | `maas` (cloud, default) or `selfhosted` (local GPU)   |
-| `--env-file`      | auto       | Path to `.env` file (default: auto-discover from cwd) |
-| `--output / -o`   | `./output` | Output directory                                      |
-| `--stdout`        | off        | Print JSON + Markdown to stdout                       |
-| `--no-save`       | off        | Skip writing files (use with `--stdout`)              |
-| `--json-only`     | off        | stdout JSON only, no Markdown                         |
-| `--no-layout-vis` | off        | Skip layout visualization images                      |
-| `--config / -c`   | none       | Path to YAML config override                          |
-| `--log-level`     | `INFO`     | `DEBUG` / `INFO` / `WARNING` / `ERROR`                |
+## Reference
 
----
-
-## Typical Agent Workflow
-
-```
-receive document path / URL
-       │
-       ▼
-glmocr.parse(path)            ← single call, handles PDF/image
-       │
-       ▼
-result.to_dict()              ← safe to pass as tool output
-       │
-       ├── markdown_result    → hand to LLM for reading / summarization
-       └── json_result        → structured extraction (tables, formulas, regions by label)
-```
-
-### Filter by label
-
-```python
-result = glmocr.parse("report.png")
-regions = result.json_result[0]  # first page
-
-tables = [r for r in regions if r["label"] == "table"]
-formulas = [r for r in regions if r["label"] == "formula"]
-body_text = [r for r in regions if r["label"] == "text"]
-```
-
-### Multi-page PDF → iterate pages
-
-```python
-with GlmOcr(api_key="sk-xxx") as parser:
-    result = parser.parse("document.pdf")   # all pages in one PipelineResult
-    for page_idx, page_regions in enumerate(result.json_result):
-        print(f"Page {page_idx + 1}: {len(page_regions)} regions")
-        for region in page_regions:
-            print(f"  [{region['label']}] {region['content'][:60]}")
-```
-
-### Programmatic config (no env vars)
-
-```python
-from glmocr.config import GlmOcrConfig
-
-cfg = GlmOcrConfig.from_env(
-    api_key="sk-xxx",
-    mode="maas",
-    timeout=600,
-    log_level="DEBUG",
-)
-```
-
----
-
-## Output Directory Layout
-
-After `result.save(output_dir)`:
-
-```
-output_dir/
-  <image_stem>/
-    <image_stem>.json         ← structured regions
-    <image_stem>.md           ← full Markdown (with cropped figure images)
-    imgs/                     ← cropped figures referenced in Markdown
-    layout_vis/               ← layout detection overlay images (if enabled)
-      <image_stem>.jpg
-```
-
----
-
-## Common Pitfalls
-
-- **`GLMOCR_API_KEY` not set**: SDK defaults to MaaS mode. Without a key, `parse()` will fail with a clear error message and quick-fix instructions. Set via `export GLMOCR_API_KEY=sk-xxx`, add to a `.env` file, or pass `--api-key sk-xxx` to the CLI.
-- **Large PDFs**: Default timeout is 600s. For very long documents increase with `timeout=1200`.
-- **`result.json_result` is a string**: Happens when the model returns malformed JSON. The SDK preserves the raw string — parse or log it manually.
+- `references/output_schema.md` — detailed output format specification

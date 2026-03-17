@@ -15,8 +15,12 @@ from __future__ import annotations
 import re
 import json
 from copy import deepcopy
-from wordfreq import zipf_frequency
 from typing import TYPE_CHECKING, List, Dict, Tuple, Any
+
+try:  # Optional dependency for better English word validation quality.
+    from wordfreq import zipf_frequency
+except Exception:  # pragma: no cover
+    zipf_frequency = None
 
 from glmocr.postprocess.base_post_processor import BasePostProcessor
 from glmocr.utils.logging import get_logger, get_profiler
@@ -313,6 +317,32 @@ class ResultFormatter(BasePostProcessor):
     # Text block processing
     # =========================================================================
 
+    def _is_likely_valid_merged_word(self, merged_word: str) -> bool:
+        """Check whether a hyphen-merged token looks like a valid word.
+
+        Uses `wordfreq` when available, and falls back to a lightweight
+        regex heuristic when `wordfreq` is not installed.
+        """
+        token = merged_word.strip().lower()
+        if not token:
+            return False
+
+        if zipf_frequency is not None:
+            try:
+                return zipf_frequency(token, "en") >= 2.5
+            except Exception:
+                pass
+
+        # Fallback heuristic (dependency-free):
+        # - alphabetic-ish token
+        # - length in a reasonable range
+        # - avoid obviously malformed merges
+        if not re.fullmatch(r"[a-z][a-z'\-]{2,30}", token):
+            return False
+        if "--" in token or "''" in token:
+            return False
+        return True
+
     def _merge_text_blocks(self, json_page_results: List[Dict]) -> List[Dict]:
         """Merge hyphenated text blocks.
 
@@ -364,8 +394,7 @@ class ResultFormatter(BasePostProcessor):
                                 merged_word = word_fragment_before + word_fragment_after
 
                                 # Validate merged word
-                                zipf_score = zipf_frequency(merged_word.lower(), "en")
-                                if zipf_score >= 2.5:
+                                if self._is_likely_valid_merged_word(merged_word):
                                     merged_content = (
                                         content_stripped[:-1] + next_content.lstrip()
                                     )
