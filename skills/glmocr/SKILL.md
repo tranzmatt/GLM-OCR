@@ -6,6 +6,16 @@ description:
   Use this skill whenever the user wants to extract text from images, perform OCR on
   pictures, scan documents, convert images to text, or process any image files to get
   their textual content.
+metadata:
+  openclaw:
+    requires:
+      env:
+        - GLM_OCR_API_KEY
+      bins:
+        - python
+    primaryEnv: GLM_OCR_API_KEY
+    emoji: "📄"
+    homepage: https://github.com/zai-org/GLM-OCR/tree/main/skills/glmocr
 ---
 
 # GLM-OCR Text Extraction Skill
