@@ -6,6 +6,16 @@ description: |
   Invokes the GLM-OCR SDK (pip install glmocr) to parse documents via Zhipu's cloud API. No GPU required. Returns structured JSON (regions with labels + bounding boxes) and Markdown. Agent can operate entirely via CLI — no YAML files needed.
 
   NOT for: real-time camera feeds, audio transcription, or non-document images (photos, illustrations).
+metadata:
+  openclaw:
+    requires:
+      env:
+        - GLMOCR_API_KEY
+      bins:
+        - python
+    primaryEnv: GLMOCR_API_KEY
+    emoji: "📄"
+    homepage: https://github.com/zai-org/GLM-OCR/tree/main/skills/sdk
 ---
 
 # OpenClaw Skill: glmocr
