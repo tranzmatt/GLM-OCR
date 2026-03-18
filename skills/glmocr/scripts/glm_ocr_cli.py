@@ -16,44 +16,19 @@ import json
 import logging
 import mimetypes
 import os
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-
-def _ensure_deps():
-    """Auto-install missing dependencies."""
-    missing = []
-    try:
-        import requests  # noqa: F401
-    except ImportError:
-        missing.append("requests")
-    try:
-        from dotenv import load_dotenv  # noqa: F401
-    except ImportError:
-        missing.append("python-dotenv")
-    if not missing:
-        return
-    print(f"Installing missing dependencies: {', '.join(missing)}", file=sys.stderr)
-    subprocess.check_call(
-        [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "--quiet",
-            "--break-system-packages",
-            *missing,
-        ],
-        stdout=subprocess.DEVNULL,
+try:
+    import requests
+except ImportError:
+    print(
+        "Error: Missing dependency 'requests'. Install with: pip install -r scripts/requirements.txt",
+        file=sys.stderr,
     )
-
-
-_ensure_deps()
-
-import requests  # noqa: E402
+    sys.exit(2)
 
 # Fix Windows console encoding
 if sys.platform == "win32":
@@ -68,6 +43,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 60  # seconds
 API_GUIDE_URL = "https://open.bigmodel.cn/usercenter/apikeys"
+DEFAULT_API_URL = "https://open.bigmodel.cn/api/paas/v4/layout_parsing"
 
 # =============================================================================
 # Environment
@@ -81,14 +57,23 @@ def _load_env():
     global _env_loaded
     if _env_loaded:
         return
-    try:
-        from dotenv import load_dotenv
 
-        env_file = Path(__file__).parent.parent / ".env"
-        if env_file.exists():
-            load_dotenv(env_file)
-    except ImportError:
-        pass
+    env_file = Path(__file__).parent.parent / ".env"
+    if env_file.exists():
+        try:
+            with open(env_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    key, value = line.split("=", 1)
+                    key = key.strip()
+                    value = value.strip()
+                    if key and key not in os.environ:
+                        os.environ[key] = value
+        except OSError as e:
+            logger.debug(f"Failed to load .env: {e}")
+
     _env_loaded = True
 
 
@@ -116,23 +101,15 @@ def get_config() -> tuple[str, str]:
     Raises:
         ValueError: If not configured
     """
-    api_url = _get_env("GLM_OCR_API_URL")
     api_key = _get_env("GLM_OCR_API_KEY")
-
-    # Set default URL if not configured
-    if not api_url:
-        api_url = "https://open.bigmodel.cn/api/paas/v4/layout_parsing"
 
     if not api_key:
         raise ValueError(
             f"GLM_OCR_API_KEY not configured. Get your API key at: {API_GUIDE_URL}"
         )
 
-    # Normalize URL
-    if not api_url.startswith(("http://", "https://")):
-        api_url = f"https://{api_url}"
-
-    return api_url, api_key
+    # Security: use fixed official endpoint to avoid key exfiltration via custom URL.
+    return DEFAULT_API_URL, api_key
 
 
 # =============================================================================
@@ -400,7 +377,7 @@ Examples:
 
 Configuration:
   Run: python scripts/config_setup.py setup
-  Or set in .env: GLM_OCR_API_KEY, GLM_OCR_API_URL
+    Or set in .env: GLM_OCR_API_KEY
         """,
     )
 

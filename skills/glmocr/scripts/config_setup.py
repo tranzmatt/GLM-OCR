@@ -4,33 +4,9 @@ Environment Variable Configuration Setup
 Helps users set up their .env file for GLM-OCR skill
 """
 
-import subprocess
 import sys
 from pathlib import Path
 from typing import Optional
-
-
-def _ensure_deps():
-    """Auto-install missing dependencies."""
-    try:
-        from dotenv import load_dotenv  # noqa: F401
-    except ImportError:
-        print("Installing python-dotenv...", file=sys.stderr)
-        subprocess.check_call(
-            [
-                sys.executable,
-                "-m",
-                "pip",
-                "install",
-                "--quiet",
-                "--break-system-packages",
-                "python-dotenv",
-            ],
-            stdout=subprocess.DEVNULL,
-        )
-
-
-_ensure_deps()
 
 
 def _get_skill_root() -> Path:
@@ -132,21 +108,6 @@ def _setup_interactive() -> dict:
 
     env_vars["GLM_OCR_API_KEY"] = api_key
 
-    # API URL (optional)
-    current_url = existing.get("GLM_OCR_API_URL", "")
-    default_url = "https://open.bigmodel.cn/api/paas/v4/layout_parsing"
-
-    print()
-    if current_url:
-        print(f"Current API URL: {current_url}")
-
-    api_url = input(f"Enter API URL (press Enter for default: {default_url}): ").strip()
-
-    if not api_url:
-        api_url = current_url if current_url else default_url
-
-    env_vars["GLM_OCR_API_URL"] = api_url
-
     print()
     print("=" * 60)
     print("Configuration Summary:")
@@ -154,13 +115,12 @@ def _setup_interactive() -> dict:
     print(
         f"API Key: {env_vars['GLM_OCR_API_KEY'][:8]}...{env_vars['GLM_OCR_API_KEY'][-4:]}"
     )
-    print(f"API URL: {env_vars['GLM_OCR_API_URL']}")
     print()
 
     return env_vars
 
 
-def _setup_from_args(api_key: str, api_url: Optional[str] = None) -> dict:
+def _setup_from_args(api_key: str) -> dict:
     """
     Setup environment variables from command line arguments
 
@@ -171,11 +131,7 @@ def _setup_from_args(api_key: str, api_url: Optional[str] = None) -> dict:
     Returns:
         Dictionary of environment variables
     """
-    env_vars = {
-        "GLM_OCR_API_KEY": api_key,
-        "GLM_OCR_API_URL": api_url
-        or "https://open.bigmodel.cn/api/paas/v4/layout_parsing",
-    }
+    env_vars = {"GLM_OCR_API_KEY": api_key}
     return env_vars
 
 
@@ -248,9 +204,6 @@ Examples:
 
   # Show current configuration
   python config_setup.py show
-
-  # Setup with custom URL
-  python config_setup.py setup --api-key YOUR_KEY --api-url https://api.example.com
         """,
     )
 
@@ -261,7 +214,6 @@ Examples:
         "setup", help="Set up environment configuration"
     )
     setup_parser.add_argument("--api-key", "-k", help="GLM-OCR API key")
-    setup_parser.add_argument("--api-url", "-u", help="API endpoint URL")
     setup_parser.add_argument(
         "--non-interactive",
         "-n",
@@ -286,7 +238,7 @@ Examples:
     if args.command == "setup":
         # Get configuration
         if args.api_key:
-            env_vars = _setup_from_args(args.api_key, args.api_url)
+            env_vars = _setup_from_args(args.api_key)
         elif args.non_interactive:
             print("Error: --api-key is required in non-interactive mode")
             sys.exit(1)
