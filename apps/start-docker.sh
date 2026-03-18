@@ -54,11 +54,11 @@ start_backend() {
     # 启动新容器
     docker run -d \
         --name glm-ocr-backend \
-        -p 8000:8000 \
+        -p 8100:8100 \
         --restart unless-stopped \
         glm-ocr-backend:latest
 
-    echo -e "${GREEN}✓ Backend 已启动在 http://localhost:8000${NC}"
+    echo -e "${GREEN}✓ Backend 已启动在 http://localhost:8100${NC}"
 }
 
 # 主执行流程
@@ -69,8 +69,8 @@ echo -e "\n${BLUE}========================================${NC}"
 echo -e "${GREEN}✓ 所有服务已成功启动！${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo -e "${YELLOW}Frontend:${NC} http://localhost:3000"
-echo -e "${YELLOW}Backend:${NC}  http://localhost:8000"
-echo -e "${YELLOW}API Docs:${NC} http://localhost:8000/docs"
+echo -e "${YELLOW}Backend:${NC}  http://localhost:8100"
+echo -e "${YELLOW}API Docs:${NC} http://localhost:8100/docs"
 echo -e "\n${YELLOW}查看日志命令：${NC}"
 echo -e "  Frontend: docker logs -f glm-ocr-frontend"
 echo -e "  Backend:  docker logs -f glm-ocr-backend"

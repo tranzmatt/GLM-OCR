@@ -115,7 +115,7 @@ uv sync
 APP_NAME=OCR Task System
 DEBUG=False
 HOST=0.0.0.0
-PORT=8000
+PORT=8100
 
 # 数据库
 DATABASE_URL=sqlite+aiosqlite:///./tasks.db
@@ -132,13 +132,13 @@ TASK_TIMEOUT=3600
 
 ```bash
 # 方式1：使用 uv
-uv run uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn backend.main:app --reload --host 0.0.0.0 --port 8100
 
 # 方式2：直接运行
-python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 8100
 ```
 
-访问 API 文档：http://localhost:8000/docs
+访问 API 文档：http://localhost:8100/docs
 
 ## 📖 API 使用指南
 
@@ -160,7 +160,7 @@ python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 #### 1. 提交任务
 
 ```bash
-curl -X POST http://localhost:8000/tasks/upload \
+curl -X POST http://localhost:8100/tasks/upload \
   -F "file=@document.pdf" \
   -F "processing_mode=pipeline" \
   -F "priority=2" \
@@ -186,7 +186,7 @@ curl -X POST http://localhost:8000/tasks/upload \
 #### 2. 查询任务状态
 
 ```bash
-curl http://localhost:8000/tasks/{task_id}
+curl http://localhost:8100/tasks/{task_id}
 ```
 
 **响应示例：**
@@ -213,13 +213,13 @@ curl http://localhost:8000/tasks/{task_id}
 #### 3. 列出任务
 
 ```bash
-curl "http://localhost:8000/tasks/?status=completed&limit=10"
+curl "http://localhost:8100/tasks/?status=completed&limit=10"
 ```
 
 #### 4. 取消任务
 
 ```bash
-curl -X DELETE http://localhost:8000/tasks/{task_id}
+curl -X DELETE http://localhost:8100/tasks/{task_id}
 ```
 
 ## 🐳 Docker 部署
@@ -235,7 +235,7 @@ docker build -t glm-ocr:latest .
 ```bash
 docker run -d \
   --name glm-ocr \
-  -p 8000:8000 \
+  -p 8100:8100 \
   -v $(pwd)/data:/backend/data \
   -e WORKER_COUNT=5 \
   glm-ocr:latest
@@ -283,7 +283,7 @@ uv add --dev pytest
 |-------|------|--------|
 | `APP_NAME` | 应用名称 | OCR Task System |
 | `HOST` | 监听地址 | 0.0.0.0 |
-| `PORT` | 监听端口 | 8000 |
+| `PORT` | 监听端口 | 8100 |
 | `DATABASE_URL` | 数据库连接 | sqlite+aiosqlite:///./tasks.db |
 | `OUTPUT_DIR` | 输出目录 | ./data |
 | `WORKER_COUNT` | Worker 数量 | 5 |
@@ -316,7 +316,7 @@ LOG_LEVEL=DEBUG uv run uvicorn backend.main:app
 ## 📚 相关文档
 
 - [UV 包管理器使用指南](docs/UV_GUIDE.md)
-- [API 文档](http://localhost:8000/docs)
+- [API 文档](http://localhost:8100/docs)
 - [项目架构文档](docs/ARCHITECTURE.md)
 
 ## 🤝 贡献指南

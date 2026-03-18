@@ -112,12 +112,12 @@ src/
 创建 `.env` 文件并配置：
 
 ```env
-VITE_API_URL=http://localhost:8000/api/v1
+VITE_API_URL=http://localhost:8100/api/v1
 ```
 
 ### API 配置
 
-默认 API 地址为 `http://localhost:8000/api/v1`，可通过环境变量 `VITE_API_URL` 修改。
+默认 API 地址为 `http://localhost:8100/api/v1`，可通过环境变量 `VITE_API_URL` 修改。
 
 ## 📖 使用说明
 

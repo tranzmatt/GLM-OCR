@@ -55,12 +55,12 @@ RUN pip install --no-cache-dir uv -i https://pypi.tuna.tsinghua.edu.cn/simple &&
     uv pip install --system -e . 
 
 
-# 暴露端口 (默认8000，可通过环境变量配置)
-EXPOSE 8000
+# 暴露端口 (默认8100，可通过环境变量配置)
+EXPOSE 8100
 
 # 设置健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
+    CMD python -c "import requests; requests.get('http://localhost:8100/health')" || exit 1
 
 # 运行应用（激活虚拟环境）
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8100"]
