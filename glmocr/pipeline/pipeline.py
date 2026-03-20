@@ -292,21 +292,30 @@ class Pipeline:
         tracker: UnitTracker,
         original_inputs: List[str],
     ) -> Generator[PipelineResult, None, None]:
-        """Wait for units to complete and yield their formatted results.
+        """Wait for units to complete and yield their formatted results
+        **in the original input order**.
 
-        A unit enters the ready queue when:
-          - ``finalize_unit`` has been called (region count is known), AND
-          - all its regions have been recognised (``on_region_done`` counter
-            reached the target).
+        Units may complete in arbitrary order; finished results are buffered
+        and yielded sequentially (unit 0 first, then 1, 2, …).
 
         ``None`` from the ready queue signals a pipeline error (shutdown).
         """
-        emitted: set = set()
-        while len(emitted) < tracker.num_units:
+        pending: Dict[int, PipelineResult] = {}
+        built: set = set()
+        next_to_emit = 0
+        num_units = tracker.num_units
+
+        while next_to_emit < num_units:
+            while next_to_emit in pending:
+                yield pending.pop(next_to_emit)
+                next_to_emit += 1
+            if next_to_emit >= num_units:
+                break
+
             u = tracker.wait_next_ready_unit()
             if u is None:
                 break
-            if u in emitted:
+            if u in built:
                 continue
 
             region_count = tracker.unit_region_count[u]
@@ -330,14 +339,13 @@ class Pipeline:
                 grouped, cropped_images=cropped_images or None,
             )
 
-            # Collect layout visualization images for this unit
             vis_images = {}
             for pi in page_indices:
                 img = state.layout_vis_images.pop(pi, None)
                 if img is not None:
                     vis_images[pi] = img
 
-            yield PipelineResult(
+            pending[u] = PipelineResult(
                 json_result=json_u,
                 markdown_result=md_u,
                 original_images=[original_inputs[u]],
@@ -345,4 +353,4 @@ class Pipeline:
                 raw_json_result=raw_json,
                 layout_vis_images=vis_images or None,
             )
-            emitted.add(u)
+            built.add(u)
