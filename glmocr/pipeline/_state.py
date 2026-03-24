@@ -43,7 +43,6 @@ class PipelineState:
         self.unit_indices_holder: List[Optional[List[int]]] = [None]
 
         # ── Recognition results (stage 3 appends, main thread reads) ─
-        self._recognition_results: List[Dict[str, Any]] = []
         self._results_by_page: Dict[int, List[Dict]] = {}
         self._results_lock = threading.Lock()
 
@@ -118,9 +117,7 @@ class PipelineState:
 
     def add_recognition_result(self, page_idx: int, region: Dict) -> None:
         """Append a completed region result and notify the tracker."""
-        result = {"page_idx": page_idx, "region": region}
         with self._results_lock:
-            self._recognition_results.append(result)
             self._results_by_page.setdefault(page_idx, []).append(region)
         tracker = self._tracker
         if tracker is not None:
@@ -131,6 +128,18 @@ class PipelineState:
         """
         with self._results_lock:
             return [list(self._results_by_page.get(pi, [])) for pi in page_indices]
+
+    def release_unit_data(self, page_indices: List[int]) -> None:
+        """Release per-page data for a unit after it has been emitted.
+
+        Frees recognition results and layout results so that memory is not
+        held for the lifetime of the entire process() call.
+        """
+        with self._results_lock:
+            for pi in page_indices:
+                self._results_by_page.pop(pi, None)
+        for pi in page_indices:
+            self.layout_results_dict.pop(pi, None)
 
     # ------------------------------------------------------------------
     # Pre-cropped image store (for image-type regions)

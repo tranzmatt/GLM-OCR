@@ -345,6 +345,8 @@ class Pipeline:
                 if img is not None:
                     vis_images[pi] = img
 
+            state.release_unit_data(page_indices)
+
             pending[u] = PipelineResult(
                 json_result=json_u,
                 markdown_result=md_u,

@@ -48,7 +48,7 @@ def run_worker(args) -> None:
 
             no_save = getattr(args, "no_save", False)
 
-            for result in parser.parse(files, stream=True):
+            for result in parser.parse(files, stream=True, save_layout_visualization=not no_save):
                 completed += 1
 
                 if not no_save:
